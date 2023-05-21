@@ -74,24 +74,36 @@
 
                 // Vertex shader: convert vertex to position in clip space
                 // @location references shaderLocation
-                @vertex
-                fn vertexMain(@location(0) pos: vec2f,
-                              @builtin(instance_index) instance: u32) ->
-                    @builtin(position) vec4f {
+                struct VertexInput {
+                    @location(0) pos: vec2f,
+                    @builtin(instance_index) instance: u32,
+                };
 
-                    let i = f32(instance); // Save instance_index as a float
-                    let cell00 = (pos + 1) / grid - 1; // bottom left cell (cell at (0, 0))
+                struct VertexOutput {
+                    @builtin(position) pos: vec4f,
+                    @location(0) cell: vec2f,
+                };
+
+                @vertex
+                fn vertexMain(input: VertexInput) -> VertexOutput {
+                    let i = f32(input.instance); // Save instance_index as a float
+                    let cell00 = (input.pos + 1) / grid - 1; // bottom left cell (cell at (0, 0))
                     let cell = vec2f(i % grid.x, floor(i / grid.x));
                     let cellOffset = cell / grid * 2;
                     let gridPos = cell00 + cellOffset;
-                    return vec4f(gridPos, 0, 1); // (X, Y, Z, W)
+
+                    var output: VertexOutput;
+                    output.pos = vec4f(gridPos, 0, 1); // (X, Y, Z, W)
+                    output.cell = cell;
+                    return output;
                 }
 
                 // Fragment shader: return color of pixel in rasterized triangle
                 // @location references colorAttachment index in beginRenderPass
                 @fragment
-                fn fragmentMain() -> @location(0) vec4f {
-                    return vec4f(1, 0, 0, 1); // (Red, Green, Blue, Alpha)
+                fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
+                    let c = input.cell / grid;
+                    return vec4f(input.cell/grid, 1-(c.x+c.y), 1); // (Red, Green, Blue, Alpha)
                 }
             `
         });
